@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const express = require("express");
 const http = require("http");
+const { time } = require('console');
 
 let app = express();
 app.use(express.json());
@@ -12,10 +13,9 @@ mongoose.connect('mongodb://localhost/mongoose_basic', function (err) {
 app.use(express.static(__dirname + '/public'));
 let shareSchema = mongoose.Schema({
     message: String,
-    ttl: Number,
+    ttl: Number, //3600
     link: String,
     type: String
-
 });
 
 let share = mongoose.model("share", shareSchema);
@@ -41,25 +41,23 @@ function generateRand(x) {
 }
 
 //check if link exists
-function eckIfLinkExist(random) {
+async function  eckIfLinkExist(random) {
 
-    share.exists({ 'link': random }, function (err, doc) {
-        if (err) {
-            console.log(err)
-        } else {
-
-            if (doc.length) {
-
-                return 1;
+   
+  var value =   await share.exists({ link: random });
+                   if (value) {
+                console.log("FOUND!!!");
+             return 1;
             }
 
             else {
+                console.log("NOT FOUND");
                 return 0;
             }
-            console.log("Result :", doc) // false 
+            
         }
-    });
-}
+    
+
 
 function generateLink() {
     var randiom = generateRand(8);
@@ -99,6 +97,49 @@ app.post("/postData", function (req, res) {
 
 
 });
+
+
+// display message
+
+app.get('/:link', function (req, res) {
+
+    // console.log("HELO");
+var got =  eckIfLinkExist(req.params.link).then(data=>{
+
+
+        if(data){
+
+            console.log("HELO");
+
+            let timeFound = share.findOne({ link: req.params.link });
+    res.send(timeFound);
+            console.log(timeFound.ttl);
+            var d = new Date();
+            d.setSeconds(d.getSeconds() - timeFound);
+    
+            let data = share.findOne({ $and: [{ link: req.params.link }, { ttl: { $gte: ObjectId(d) } }] });
+    
+    
+            print(data)
+
+        }
+
+
+}) ;
+console.log(got);
+    // check if link exists
+    if (got== 1) {
+       
+
+
+
+    }
+
+    // check if ttl is > datatime.now
+
+    // fetch and post data
+
+})
 
 // Add headers
 app.use(function (req, res, next) {
